@@ -84,10 +84,21 @@ jobs:
 
           make clean
 
+          COMMIT_DATE="$(
+            git show \
+              -s \
+              --format=%cI \
+              "${GITHUB_SHA}"
+          )"
+
+          echo "Release version: ${RELEASE_VERSION}"
+          echo "Release commit:  ${GITHUB_SHA::7}"
+          echo "Release date:    ${COMMIT_DATE}"
+
           make release \
             VERSION="${RELEASE_VERSION}" \
             COMMIT="${GITHUB_SHA::7}" \
-            DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            DATE="${COMMIT_DATE}"
 
       - name: Verify exact release asset set
         shell: bash
@@ -161,6 +172,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          EXPECTED_DATE="$(
+            git show \
+              -s \
+              --format=%cI \
+              "${GITHUB_SHA}"
+          )"
+
           output="$(
             ./build/release/fbs-interlock-gateway-linux-amd64 -version
           )"
@@ -174,6 +192,11 @@ jobs:
 
           if [[ "${output}" != *"commit=${GITHUB_SHA::7}"* ]]; then
             echo "Expected binary commit ${GITHUB_SHA::7}"
+            exit 1
+          fi
+
+          if [[ "${output}" != *"date=${EXPECTED_DATE}"* ]]; then
+            echo "Expected binary date ${EXPECTED_DATE}"
             exit 1
           fi
 
